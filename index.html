@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>EntertainMe</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="reset.css">
+    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <meta charset="utf-8">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            background: #fcfdff url("family.jpg") no-repeat center center fixed;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .mapDisplay {
+            display: inline-block;
+            position: absolute;
+            right: 0px;
+            height: 100%;
+            width: 50%;
+        }
+
+        .mapOff {
+            /* display: none;*/
+        }
+
+        header {
+            position: absolute;
+            width: 100%;
+            margin: 5px auto;
+        }
+
+        h1,
+        h2 {
+            color: ghostwhite;
+            font-weight: 900;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+        }
+
+        .overlay {
+            display: inline-block;
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: auto;
+        }
+
+        #addressInput {
+            position: relative;
+            display: block;
+            background-color: #fff;
+            font-size: 15px;
+            font-weight: 300;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 10px 10px;
+            text-overflow: ellipsis;
+            width: 300px;
+            border-radius: 15px;
+            border-style: none;
+            box-shadow: 2px 2px 5px #121F1F;
+        }
+
+        #addressInput:focus {
+            border-color: #4d90fe;
+            border-radius: 15px;
+        }
+
+        #addressInput.landing {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .list ul li {
+            list-style-type: none;
+            padding: 20px;
+            margin: 10px 5px;
+            border-radius: 10px;
+            //border: 1px solid lightgrey;
+            box-shadow: 2px 2px 5px #121F1F;
+        }
+
+        .list ul li:nth-child(even) {
+            background-color: white;
+        }
+
+        .list ul li:nth-child(odd) {
+            background-color: #f0f8ff;
+        }
+
+        .list ul li:hover {
+            box-shadow: 5px 5px 5px #447676;
+            opacity: 0.95;
+            /*  transform: translate(-5px, -5px);*/
+        }
+
+        .list ul li a {
+            text-decoration: none;
+        }
+
+        .list img {
+            position: relative;
+            display: inline-block;
+            width: 70px;
+            height: 50px;
+            right: 0px;
+        }
+
+        .shrink {
+            width: 50%;
+        }
+    </style>
+    <script>
+        var map;
+        var infowindow;
+
+        var address;
+        var pos = " ";
+        var preferedWeather = " ";
+        var temp = " ";
+        var results = " ";
+        var query = "";
+
+        var buildTheHtmlOutput = "";
+        var place_name = "";
+
+        var placeTemp = "";
+        var place = "";
+
+        var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        var labelIndex = 0;
+
+        function requestResults(searchTerm, searchTerm2, searchTerm3, searchTerm4) {
+            //
+            //  $.ajax({
+            //     url: "http://api.wunderground.com/api/30b617dd559fd7d3/geolookup/conditions/q/" + searchTerm2 + ".json",
+            //
+            //   dataType: "jsonp",
+            //   success: function (parsed_json) {
+            //       place = parsed_json['location']['city'];
+            //       placeTemp = parsed_json['current_observation']['temp_f'];
+
+            //       console.log(placeTemp);
+            //    }
+            // });
+
+            //$.getJSON("url", {settingsObject }, function (receivedApiData) { callBackFunction  });
+
+            if (searchTerm3 === undefined) {
+                var searchTerm3 = "No Ratings";
+            }
+
+
+            $.getJSON("https://www.googleapis.com/youtube/v3/search", {
+                    part: "snippet", //Youtube API special parameter (please check documentation here https://developers.google.com/youtube/)
+                    maxResults: 1, //number of results per page
+                    key: "AIzaSyCs5GOrkTgUg5UYYHF2OFozXIe0iGDEHlM",
+                    q: searchTerm || searchTerm2, //shearch query from the user
+                    type: "video" //only return videos (no channels or playlists) so we can take the video ID and link it back to Youtube
+                },
+
+
+                function (receivedApiData) {
+                    //show the json array received from the API call
+                    //console.log(receivedApiData);
+                    // if there are no results it will just empty the list
+                    // if (receivedApiData.pageInfo.totalResults == 0) {
+                    //   console.log("No videos found!");
+                    // }
+                    //if there are results, call the displaySearchResults
+                    // else {
+
+                    displayYoutubeVideo(receivedApiData.items, searchTerm, searchTerm2, searchTerm3, searchTerm4);
+
+                    //  }
+
+                });
+
+
+
+            ///createList(searchTerm, searchTerm2, searchTerm3);
+
+
+
+        }
+        // function createList(searchTerm, searchTerm2, searchTerm3){
+
+
+
+
+
+
+        function displayYoutubeVideo(videosArray, searchTerm, searchTerm2, searchTerm3, searchTerm4) {
+
+            //create an empty variable to store one LI for each one the results
+            var buildTheHtmlOutput = "";
+
+
+
+
+            $.each(videosArray, function (videosArrayKey, videosArrayValue) {
+                //create and populate one LI for each of the results ( "+=" means concatenate to the previous one)
+
+                // buildTheHtmlOutput += "<p>" + videosArrayValue.snippet.title + "</p>"; //output vide title
+
+                buildTheHtmlOutput += "<a href='https://www.youtube.com/watch?v=" + videosArrayValue.id.videoId + "' target='_blank'>"; //taget blank is going to open the video in a new window
+
+                buildTheHtmlOutput += "<img src='" + videosArrayValue.snippet.thumbnails.high.url + "'/>"; //display video's thumbnail
+
+                buildTheHtmlOutput += "</a>";
+
+                //$(".list ul li").append("<p>" + buildTheHtmlOutput + "</p>");
+
+
+
+            });
+
+            //console.log(userSearch[i]);
+
+
+            //can console log the temp, but not sending to list...//
+
+            var n = searchTerm2.search(",");
+
+            sliceNum = (n + 2);
+            var newCity = searchTerm2.slice(sliceNum);
+
+            weatherLink = "https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#q=weather%20";
+
+            $(".list ul").append(
+                "<li>" +
+                searchTerm +
+                "<p>" + searchTerm2 + "</p>" +
+                // "<p>" + place.formatted_phone_number + "</p>" +
+                //"<p>" + place.opening_hours.open_now + "</p>" +
+                // "<p>" + place.website + "</p>" +
+                buildTheHtmlOutput +
+                "<p><a href=" + weatherLink + newCity + " target='_blank'>Google Weather</a></p>" +
+                "<p> Ratings: " + searchTerm3 + "</p></li>"
+
+
+            );
+
+        }
+
+
+
+
+
+
+
+        //use the HTML output to show it in the index.html
+
+
+
+
+        //  function formatSearchResults(place_name, place_formatted_address, place_formatted_phone_number, place_opening_hours_open_now, place_website, place_rating) {
+
+        // var output = "";
+
+        // $.each($.parseJSON(place_name, place_formatted_address, place_formatted_phone_number, //place_opening_hours_open_now, place_website, place_rating), function () {
+
+        //       output += "<li>" + place_name;
+        //      output += "<br/>";
+        //      output += place_formatted_address + "<br/>";
+        //       output += place_formatted_phone_number + "<br/>";
+
+        // output += displayYoutubeVideo(place_name) + "<br/>";
+
+        //       output += open + "<br/>";
+        //      output += place.website + "<br/>";
+        //      output += place.rating;
+        //     output += "</li><br/>";
+
+        //      return output;
+        //  });
+
+
+
+        // }
+
+        //functiontion displayYoutubeVideo(place_name) {
+
+        //}
+
+        function initAutocomplete(buildTheHtmlOutput) {
+
+
+            var map = new google.maps.Map(document.getElementById('map'), {
+
+                center: {
+                    lat: -33.8688,
+                    lng: 151.2195
+                },
+                zoom: 13,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            });
+
+            infowindow = new google.maps.InfoWindow();
+            // Try HTML5 geolocation.
+            if (navigator.geolocation) {
+
+
+                navigator.geolocation.getCurrentPosition(function (position) {
+                        var pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+
+                        infowindow.setPosition(pos);
+                        infowindow.setContent('Location found.');
+
+                        map.setCenter(pos);
+
+
+                    },
+                    function () {
+                        handleLocationError(true, infowindow, map.getCenter());
+                    });
+            } else {
+                // Browser doesn't support Geolocation
+                handleLocationError(false, infowindow, map.getCenter());
+            }
+
+            // Create the search box and link it to the UI element.
+
+            var input = document.getElementById('addressInput');
+            var searchBox = new google.maps.places.SearchBox(input);
+
+            //hack control position
+            google.maps.event.addDomListener(map, 'tilesloaded', function () {
+                if ($('#addressInputHolder').length == 0) {
+                    $('div.gm-style #addressInput').wrap('<div id="addressInputHolder" />');
+                }
+            });
+
+            // Bias the SearchBox results towards current map's viewport.
+
+            map.addListener('bounds_changed', function () {
+
+                searchBox.setBounds(map.getBounds());
+
+            });
+
+            var markers = [];
+
+            // Listen for the event fired when the user selects a prediction and retrieve
+            // more details for that place.
+            searchBox.addListener('places_changed', function () {
+
+                var places = searchBox.getPlaces();
+
+                if (places.length == 0) {
+                    return;
+                }
+
+                $(".list ul").empty();
+
+                $("header").hide();
+
+                $('#addressInput').removeClass("landing");
+
+                $('.overlay').addClass("shrink");
+
+                // Clear out the old markers.
+                markers.forEach(function (marker) {
+                    marker.setMap(null);
+
+
+                });
+                markers = [];
+                // For each place, get the icon, name and location.
+                var bounds = new google.maps.LatLngBounds();
+                places.forEach(function (place) {
+                    var placeLoc = place.geometry.location;
+
+                    // if(place.opening_hours.open_now == true) {
+                    //     var open = "Open";
+                    // }
+                    // else {var open = "Closed"
+                    //}
+                    // Create a marker for each place.
+                    var marker = markers.push(new google.maps.Marker({
+                                map: map,
+                                // icon: icon,
+                                title: place.name,
+                                address: place.formatted_address,
+                                position: place.geometry.location,
+                                animation: google.maps.Animation.DROP,
+
+                            } //,
+
+
+
+                            //)
+                        )
+
+                    );
+
+
+
+
+
+
+
+
+                    requestResults(place.name, place.formatted_address, place.rating, place.geometry.location)
+
+
+                    //place.formatted_address, place.formatted_phone_number, place.opening_hours.open_now, place.website, place.rating));
+
+                    if (place.geometry.viewport) {
+                        // Only geocodes have viewport.
+                        bounds.union(place.geometry.viewport);
+                    } else {
+                        bounds.extend(place.geometry.location);
+                    }
+                });
+                map.fitBounds(bounds);
+            });
+        }
+
+        function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+            infoWindow.setPosition(pos);
+            infoWindow.setContent(browserHasGeolocation ?
+                'Error: The Geolocation service failed.' :
+                'Error: Your browser doesn\'t support geolocation.');
+        }
+
+
+        function searchLocations(serviceType) {
+            var service = new google.maps.places.PlacesService(map);
+            //service.getDetails(callback);
+
+            service.nearbySearch({
+                location: pos,
+                radius: 5000,
+                types: [serviceType],
+
+            }, callback);
+
+        }
+
+
+        //function runPlaces() {
+
+        //            $('.type-of-place-option').on('click', function () {
+        //                event.preventDefault();
+        //    selectedPlaceType = $("#typeOfPlace").val();
+        //var address = $('#addressInput').val();
+        //    console.log(selectedPlaceType, address);
+
+        //address is variable
+        //searchLocations(selectedPlaceType);
+
+
+
+        // }
+
+
+
+
+
+        $(document).ready(function () {
+            //search nearby points of interest automaticaly
+            //searchLocations("school");
+            //search nearby points of interest using the input
+
+
+            $('.overlay').on('click', '#searchAddress', function () {
+
+                event.preventDefault();
+
+                var address = $('#addressInput').val();
+
+                //address is variable
+                searchLocations(address);
+
+            });
+
+
+            $("select").hide();
+
+            //$("select").click(function () {
+            //    event.preventDefault();
+            //    var selectedPlaceType = $("#typeOfPlace").val();
+            //    searchLocations(selectedPlaceType);
+            //    console.log(selectedPlaceType);
+
+            // });
+
+
+        });
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <h1>EntertainMe</h1>
+        <h2>Family-friendly traveling</h2>
+    </header>
+    <div class="overlay">
+
+        <!--make a search field here-->
+        <input type="text" id="addressInput" class="searchAddress landing" size="10" value="" placeholder="Take me to..." />
+        <div class="list">
+            <ul></ul>
+
+        </div>
+
+        <!--make a drop down here-->
+
+    </div>
+    <div id="map" class="mapDisplay"></div>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCs5GOrkTgUg5UYYHF2OFozXIe0iGDEHlM&libraries=places&keyword=family&callback=initAutocomplete" async defer></script>
+</body>
+
+</html>
